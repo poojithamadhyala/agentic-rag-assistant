@@ -1,0 +1,8 @@
+{"question": "What is the default simulation timestep in MuJoCo?", "expected_doc_ids": ["mujoco_basics"], "reference_answer": "0.002 seconds (500 Hz)"}
+{"question": "What learning rate is a common starting point for PPO humanoid locomotion?", "expected_doc_ids": ["ppo_training"], "reference_answer": "3e-4"}
+{"question": "What payload can the UR5e handle?", "expected_doc_ids": ["ros2_digital_twin"], "reference_answer": "5 kg"}
+{"question": "What causes silent subscription failures in ROS 2?", "expected_doc_ids": ["ros2_digital_twin"], "reference_answer": "Mismatched QoS profiles"}
+{"question": "What does an explained variance above 0.9 indicate?", "expected_doc_ids": ["ppo_training"], "reference_answer": "The value function (critic) predicts returns well"}
+{"question": "Which parameters does domain randomization typically cover for sim-to-real transfer?", "expected_doc_ids": ["ppo_training"], "reference_answer": "Mass, friction, motor strength, sensor noise"}
+{"question": "What do solref and solimp parameterize in MuJoCo?", "expected_doc_ids": ["mujoco_basics"], "reference_answer": "The soft-constraint contact model"}
+{"question": "Which QoS should sensor streams use in a ROS 2 digital twin?", "expected_doc_ids": ["ros2_digital_twin"], "reference_answer": "Best-effort QoS with small history depth"}
