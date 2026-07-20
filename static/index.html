@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>RoboDocs — Agentic RAG Assistant</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+:root{
+  --bg:#ffffff; --ink:#171923; --dim:#64748b; --faint:#94a3b8;
+  --line:#e8ecf3; --wash:#f6f8fc;
+  --blue:#3b6cf6; --violet:#8b5cf6; --pink:#ec4899;
+  --blue-soft:#eef3ff; --violet-soft:#f5f1ff;
+  --green:#0f9d6c; --amberc:#b45309; --red:#dc2626;
+  --grad:linear-gradient(120deg,var(--blue),var(--violet));
+  --body:'Inter',system-ui,sans-serif; --mono:'JetBrains Mono',ui-monospace,monospace;
+}
+*{box-sizing:border-box;margin:0}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);overflow:hidden;
+  -webkit-font-smoothing:antialiased}
+
+/* soft ambient wash + dot grid */
+.scene{position:fixed;inset:0;z-index:-1;
+  background:
+    radial-gradient(900px 420px at 18% -8%, rgba(59,108,246,.09), transparent 60%),
+    radial-gradient(900px 420px at 85% -10%, rgba(139,92,246,.09), transparent 60%),
+    radial-gradient(circle at 1px 1px, #eef1f6 1px, transparent 1.6px) 0 0/26px 26px, #fff}
+
+.shell{display:flex;flex-direction:column;height:100%;max-width:780px;margin:0 auto;padding:0 24px}
+
+/* ---------- header ---------- */
+header{display:flex;align-items:center;gap:13px;padding:24px 0 18px}
+.mark{width:40px;height:40px;border-radius:12px;background:var(--grad);display:grid;place-items:center;
+  box-shadow:0 6px 16px rgba(93,100,246,.32)}
+h1{font-size:17px;font-weight:700;letter-spacing:-.02em}
+h1 span{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+.tag{font-size:12.5px;color:var(--dim);margin-top:1px}
+.pipe{margin-left:auto;display:flex;gap:6px}
+.stage{font:600 10px var(--mono);letter-spacing:.08em;color:var(--faint);
+  border:1px solid var(--line);border-radius:999px;padding:5px 11px;background:#fff;transition:all .25s}
+.stage.on{color:#fff;background:var(--grad);border-color:transparent;
+  box-shadow:0 3px 10px rgba(93,100,246,.35)}
+.stage.done{color:var(--blue);border-color:#cdd9fd;background:var(--blue-soft)}
+@media(max-width:640px){.pipe{display:none}}
+
+/* ---------- chat ---------- */
+.chat{flex:1;overflow-y:auto;padding:8px 2px 24px}
+.chat::-webkit-scrollbar{width:6px}
+.chat::-webkit-scrollbar-thumb{background:#dde3ec;border-radius:3px}
+.msg{display:flex;gap:12px;margin:22px 0;animation:rise .32s ease both}
+@keyframes rise{from{opacity:0;transform:translateY(10px)}}
+.msg.user{flex-direction:row-reverse}
+.avatar{flex:0 0 34px;height:34px;border-radius:10px;display:grid;place-items:center;font-size:16px}
+.msg.bot .avatar{background:var(--grad);box-shadow:0 4px 12px rgba(93,100,246,.3)}
+.msg.user .avatar{background:var(--wash);border:1px solid var(--line)}
+.bubble{max-width:82%;font-size:14.5px;line-height:1.7}
+.msg.user .bubble{background:var(--grad);color:#fff;border-radius:16px 16px 5px 16px;
+  padding:12px 17px;width:fit-content;box-shadow:0 5px 14px rgba(93,100,246,.28)}
+.msg.bot .bubble{background:#fff;border:1px solid var(--line);border-radius:5px 16px 16px 16px;
+  padding:16px 19px;box-shadow:0 4px 18px rgba(23,25,35,.05);width:82%}
+.bubble b{font-weight:600}
+
+/* answer internals */
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:14px}
+.chip{font:500 11px var(--mono);border-radius:999px;padding:5px 11px;border:1px solid var(--line);color:var(--dim);background:#fff}
+.chip.hi{color:var(--green);border-color:#bfe8d7;background:#effaf5}
+.chip.med{color:var(--amberc);border-color:#eeddb8;background:#fdf8ec}
+.chip.lo{color:var(--red);border-color:#f3c6c4;background:#fdf1f0}
+.chip.tool{color:var(--violet);border-color:#e0d4fb;background:var(--violet-soft)}
+.chip.cite{color:var(--blue);border-color:#cdd9fd;background:var(--blue-soft);cursor:pointer;transition:all .15s}
+.chip.cite:hover{transform:translateY(-1px);box-shadow:0 3px 8px rgba(59,108,246,.25)}
+
+.evtoggle{margin-top:14px;background:var(--wash);border:1px solid var(--line);border-radius:10px;
+  color:var(--dim);font:500 12px var(--mono);cursor:pointer;padding:9px 13px;width:100%;
+  display:flex;align-items:center;gap:8px;transition:all .15s}
+.evtoggle:hover{border-color:#cdd9fd;color:var(--blue);background:var(--blue-soft)}
+.evtoggle .tri{transition:transform .2s;font-size:9px}
+.evtoggle.open .tri{transform:rotate(90deg)}
+.evwrap{display:none;margin-top:10px}
+.evwrap.open{display:block}
+.ev{border:1px solid var(--line);border-radius:12px;padding:13px 15px;margin-top:9px;background:#fff;transition:all .2s}
+.ev.hot{border-color:#b9cbfb;background:linear-gradient(135deg,#f4f7ff,#faf7ff);
+  box-shadow:0 4px 14px rgba(93,100,246,.13)}
+.ev .top{display:flex;justify-content:space-between;gap:10px;font:500 11px var(--mono);margin-bottom:8px}
+.ev .doc{color:var(--blue)} .ev .score{color:var(--faint)}
+.bar{height:4px;background:var(--line);border-radius:2px;overflow:hidden;margin-bottom:9px}
+.bar i{display:block;height:100%;width:0;border-radius:2px;background:var(--grad);transition:width .6s ease}
+.ev p{font-size:12.5px;line-height:1.65;color:var(--dim);max-height:4.95em;overflow:hidden}
+
+/* typing dots */
+.dots{display:inline-flex;gap:5px;align-items:center;height:14px}
+.dots i{width:6px;height:6px;border-radius:50%;background:var(--blue);animation:bob 1s ease-in-out infinite}
+.dots i:nth-child(2){background:var(--violet);animation-delay:.15s}
+.dots i:nth-child(3){background:var(--pink);animation-delay:.3s}
+@keyframes bob{40%{transform:translateY(-5px);opacity:.45}}
+.err{color:var(--red);font-size:13.5px}
+
+/* ---------- composer ---------- */
+.suggest{display:flex;flex-wrap:wrap;gap:8px;padding:4px 0 12px}
+.suggest button{background:#fff;border:1px solid var(--line);border-radius:999px;
+  color:var(--dim);font:500 12.5px var(--body);padding:8px 15px;cursor:pointer;transition:all .18s;
+  box-shadow:0 2px 6px rgba(23,25,35,.04)}
+.suggest button:hover{border-color:transparent;color:#fff;background:var(--grad);
+  transform:translateY(-2px);box-shadow:0 6px 14px rgba(93,100,246,.3)}
+.composer{display:flex;gap:10px;padding:0 0 22px}
+.composer input{flex:1;background:#fff;border:1px solid var(--line);border-radius:14px;
+  color:var(--ink);font:400 14.5px var(--body);padding:14px 17px;outline:none;
+  box-shadow:0 3px 12px rgba(23,25,35,.05);transition:all .15s}
+.composer input::placeholder{color:var(--faint)}
+.composer input:focus{border-color:var(--blue);box-shadow:0 0 0 4px var(--blue-soft)}
+.composer button{border:0;border-radius:14px;padding:0 24px;cursor:pointer;
+  font:600 14.5px var(--body);color:#fff;background:var(--grad);
+  box-shadow:0 5px 16px rgba(93,100,246,.35);transition:all .15s}
+.composer button:hover{transform:translateY(-1px);box-shadow:0 8px 20px rgba(93,100,246,.45)}
+.composer button:disabled{opacity:.5;cursor:wait;transform:none}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="scene"></div>
+<div class="shell">
+  <header>
+    <div class="mark">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round">
+        <rect x="5" y="8" width="14" height="10" rx="3"/>
+        <circle cx="9.5" cy="13" r="1.3" fill="#fff" stroke="none"/>
+        <circle cx="14.5" cy="13" r="1.3" fill="#fff" stroke="none"/>
+        <path d="M12 8V5M12 5h.01"/>
+      </svg>
+    </div>
+    <div><h1>Robo<span>Docs</span></h1><div class="tag">Agentic RAG · answers grounded in evidence</div></div>
+    <div class="pipe" id="pipe">
+      <span class="stage">RETRIEVE</span><span class="stage">REASON</span>
+      <span class="stage">CITE</span><span class="stage">ANSWER</span>
+    </div>
+  </header>
+
+  <div class="chat" id="chat"></div>
+
+  <div class="suggest" id="suggest"></div>
+  <form class="composer" id="form">
+    <input id="q" placeholder="Ask about MuJoCo, PPO training, or the ROS 2 digital twin…" autocomplete="off" required minlength="3"/>
+    <button id="go" type="submit">Ask ✦</button>
+  </form>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+const chat=$("chat");
+const REDUCED=matchMedia("(prefers-reduced-motion: reduce)").matches;
+const SUGGESTIONS=[
+  "What is the default MuJoCo timestep?",
+  "What payload can the UR5e handle?",
+  "Why do ROS 2 subscriptions fail silently?",
+  "What does explained variance above 0.9 mean?"];
+SUGGESTIONS.forEach(s=>{const b=document.createElement("button");b.type="button";b.textContent=s;
+  b.onclick=()=>{$("q").value=s;$("form").requestSubmit()};$("suggest").appendChild(b)});
+
+function addMsg(cls,avatar){
+  const m=document.createElement("div");m.className="msg "+cls;
+  m.innerHTML=`<div class="avatar">${avatar}</div><div class="bubble"></div>`;
+  chat.appendChild(m);chat.scrollTop=chat.scrollHeight;
+  return m.querySelector(".bubble");
+}
+function botBubble(){return addMsg("bot",'<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><rect x="5" y="8" width="14" height="10" rx="3"/><circle cx="9.5" cy="13" r="1.3" fill="#fff" stroke="none"/><circle cx="14.5" cy="13" r="1.3" fill="#fff" stroke="none"/><path d="M12 8V5"/></svg>')}
+function userBubble(){return addMsg("user","🧑‍💻")}
+
+botBubble().innerHTML=
+  "Hi! I answer <b>only from my robotics knowledge base</b> — I search it, cite my sources, "+
+  "and show you the exact evidence behind every answer. Try a suggestion below ↓";
+
+/* pipeline */
+let pipeTimer=null;
+function pipeRun(){const st=[...document.querySelectorAll(".stage")];let i=0;
+  st.forEach(s=>s.className="stage");
+  pipeTimer=setInterval(()=>{st.forEach((s,j)=>s.className="stage"+(j<i?" done":j===i?" on":""));
+    i=(i+1)%st.length;},550);}
+function pipeDone(ok){clearInterval(pipeTimer);
+  document.querySelectorAll(".stage").forEach(s=>s.className="stage"+(ok?" done":""));}
+
+function mdBold(text){return escapeHtml(text).replace(/\*\*(.+?)\*\*/g,"<b>$1</b>")}
+function typewrite(el,text){
+  const html=mdBold(text);
+  if(REDUCED){el.innerHTML=html;return Promise.resolve();}
+  el.textContent="";let i=0;
+  return new Promise(res=>{const t=setInterval(()=>{
+    el.textContent=text.slice(0,i+=3);chat.scrollTop=chat.scrollHeight;
+    if(i>=text.length){clearInterval(t);el.innerHTML=html;res();}},12);});
+}
+
+$("form").addEventListener("submit",async e=>{
+  e.preventDefault();
+  const question=$("q").value.trim();if(!question)return;
+  $("q").value="";$("go").disabled=true;
+  userBubble().textContent=question;
+  const thinking=botBubble();
+  thinking.innerHTML='<span class="dots"><i></i><i></i><i></i></span>';
+  pipeRun();
+  try{
+    const res=await fetch("/ask",{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({question,top_k:4})});
+    if(!res.ok){const d=(await res.json().catch(()=>({}))).detail||res.statusText;throw new Error(d);}
+    const data=await res.json();pipeDone(true);
+    await renderAnswer(thinking,data);
+  }catch(err){pipeDone(false);
+    thinking.innerHTML=`<span class="err">Request failed: ${escapeHtml(err.message)}. `+
+      `Check that ANTHROPIC_API_KEY is set in the server terminal.</span>`;
+  }finally{$("go").disabled=false;$("q").focus();}
+});
+
+async function renderAnswer(bubble,data){
+  const r=data.result;
+  bubble.innerHTML='<div class="ans"></div>';
+  await typewrite(bubble.querySelector(".ans"),r.answer);
+
+  const chips=document.createElement("div");chips.className="chips";
+  const confCls=r.confidence==="high"?"hi":r.confidence==="low"?"lo":"med";
+  chips.innerHTML=`<span class="chip ${confCls}">● ${r.confidence} confidence</span>`+
+    r.tools_used.map(t=>`<span class="chip tool">⚙ ${t}</span>`).join("");
+  r.citations.forEach(c=>{
+    const el=document.createElement("span");el.className="chip cite";el.tabIndex=0;
+    el.textContent="✦ "+c.doc_id;
+    el.onmouseenter=()=>hot(bubble,c.chunk_id,true);
+    el.onmouseleave=()=>hot(bubble,c.chunk_id,false);
+    chips.appendChild(el);});
+  bubble.appendChild(chips);
+
+  const tog=document.createElement("button");tog.type="button";tog.className="evtoggle";
+  tog.innerHTML=`<span class="tri">▶</span> Retrieved evidence (${data.retrieved.length} chunks)`;
+  const wrap=document.createElement("div");wrap.className="evwrap";
+  const max=Math.max(...data.retrieved.map(x=>x.score),1e-6);
+  data.retrieved.forEach(x=>{
+    const cited=r.citations.some(c=>c.chunk_id===x.chunk.chunk_id);
+    const d=document.createElement("div");
+    d.className="ev"+(cited?" hot":"");d.dataset.chunk=x.chunk.chunk_id;d.dataset.cited=cited?1:0;
+    d.innerHTML=`<div class="top"><span class="doc">${x.chunk.doc_id} · ${x.chunk.chunk_id}</span>
+      <span class="score">similarity ${x.score.toFixed(3)}</span></div>
+      <div class="bar"><i data-w="${(100*x.score/max).toFixed(0)}"></i></div>
+      <p>${escapeHtml(x.chunk.text)}</p>`;
+    wrap.appendChild(d);});
+  tog.onclick=()=>{const open=wrap.classList.toggle("open");
+    tog.classList.toggle("open",open);
+    if(open)requestAnimationFrame(()=>wrap.querySelectorAll(".bar i")
+      .forEach(b=>b.style.width=b.dataset.w+"%"));
+    chat.scrollTop=chat.scrollHeight;};
+  bubble.appendChild(tog);bubble.appendChild(wrap);
+  chat.scrollTop=chat.scrollHeight;
+}
+function hot(scope,chunkId,on){
+  scope.querySelectorAll(`.ev[data-chunk="${chunkId}"]`).forEach(el=>{
+    if(on)el.classList.add("hot");
+    else if(el.dataset.cited!=="1")el.classList.remove("hot");});
+  const w=scope.querySelector(".evwrap");
+  if(on&&w&&!w.classList.contains("open"))scope.querySelector(".evtoggle").click();
+}
+function escapeHtml(s){return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}
+</script>
+</body>
+</html>
