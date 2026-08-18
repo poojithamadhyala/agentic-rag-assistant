@@ -1,4 +1,4 @@
-# 🤖 Agentic RAG Assistant
+#  Agentic RAG Assistant
 
 **Ask a question. The AI reads the docs, retrieves evidence, reasons over it, and gives you a cited answer — all in one autonomous loop.**
 
@@ -40,7 +40,7 @@ You ask: "What is the default MuJoCo timestep?"
 
 The assistant comes with a built-in web console that shows the answer alongside retrieval telemetry (which chunks were retrieved, similarity scores, tool calls made).
 
-![Demo UI — Question, answer with citations, and retrieval telemetry](agentic-rag-assistant/demo-ui.png)
+![Demo UI — Question, answer with citations, and retrieval telemetry](agentic-rag-assistant/demo-preview.gif)
 
 > *To add this screenshot: run the app locally, ask a question, and screenshot the web UI at `localhost:8000`*
 
